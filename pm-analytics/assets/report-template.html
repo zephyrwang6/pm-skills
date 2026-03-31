@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{REPORT_TITLE}} - 数据分析报告</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f8f9fa;
+    color: #202124;
+    line-height: 1.6;
+  }
+
+  /* ===== Report Container ===== */
+  .report {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 48px 80px;
+  }
+
+  /* ===== Header ===== */
+  .report-header {
+    margin-bottom: 40px;
+    border-bottom: 2px solid #1a73e8;
+    padding-bottom: 24px;
+  }
+  .report-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #202124;
+    margin-bottom: 8px;
+  }
+  .report-meta {
+    display: flex;
+    gap: 24px;
+    font-size: 14px;
+    color: #5f6368;
+  }
+  .report-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* ===== Executive Summary ===== */
+  .exec-summary {
+    background: #e8f0fe;
+    border-left: 4px solid #1a73e8;
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+  }
+  .exec-summary h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a73e8;
+    margin-bottom: 12px;
+  }
+  .exec-summary ul {
+    padding-left: 20px;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #202124;
+  }
+
+  /* ===== Cards ===== */
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e8eaed;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #202124;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 16px 0 8px;
+  }
+
+  /* ===== Health Status ===== */
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .health-item {
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+  }
+  .health-green { background: #e6f4ea; border-color: #ceead6; color: #137333; }
+  .health-yellow { background: #fef7e0; border-color: #fde293; color: #b06000; }
+  .health-red { background: #fce8e6; border-color: #f9dedc; color: #c5221f; }
+
+  /* ===== Tables ===== */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 12px 0;
+  }
+  .data-table th {
+    background: #f8f9fa;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 2px solid #e8eaed;
+    font-weight: 600;
+    color: #5f6368;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #202124;
+    vertical-align: top;
+  }
+  .data-table tr:hover td { background: #f8f9fa; }
+
+  /* ===== Tags ===== */
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .tag-p0 { background: #fce8e6; color: #c5221f; }
+  .tag-p1 { background: #e8f0fe; color: #1a73e8; }
+  .tag-p2 { background: #f1f3f4; color: #5f6368; }
+  .tag-high { background: #e6f4ea; color: #137333; }
+  .tag-mid { background: #fef7e0; color: #b06000; }
+  .tag-low { background: #f1f3f4; color: #9aa0a6; }
+  .tag-corr { background: #e8eaed; color: #5f6368; }
+  .tag-causal { background: #e8f0fe; color: #1a73e8; }
+  .tag-verified { background: #e6f4ea; color: #137333; }
+
+  /* ===== Chart Container ===== */
+  .chart-container {
+    position: relative;
+    width: 100%;
+    margin: 16px 0;
+  }
+  .chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .chart-container canvas { max-height: 320px; }
+
+  /* ===== Metric Tree ===== */
+  .tree-node {
+    margin-left: 0;
+  }
+  .tree-children {
+    margin-left: 24px;
+    border-left: 2px solid #e8eaed;
+    padding-left: 12px;
+  }
+  .tree-item {
+    padding: 6px 0;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tree-item .arrow {
+    cursor: pointer;
+    width: 16px;
+    text-align: center;
+    color: #9aa0a6;
+    font-size: 12px;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .tree-item .label { color: #202124; }
+  .tree-item .value { color: #5f6368; font-size: 13px; margin-left: auto; }
+  .tree-item.highlight .label { color: #c5221f; font-weight: 600; }
+  .tree-item.highlight .value { color: #c5221f; }
+
+  /* ===== Hypothesis Cards ===== */
+  .hypothesis-card {
+    background: #f8f9fa;
+    border: 1px solid #e8eaed;
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 12px 0;
+  }
+  .hypothesis-card .h-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #202124;
+    margin-bottom: 8px;
+  }
+  .hypothesis-card .h-evidence {
+    font-size: 13px;
+    color: #5f6368;
+    margin-bottom: 8px;
+    padding-left: 16px;
+    border-left: 3px solid #e8eaed;
+  }
+  .hypothesis-card .h-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* ===== Action Cards ===== */
+  .action-card {
+    background: #fff;
+    border: 1px solid #e8eaed;
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    border-left: 4px solid #1a73e8;
+  }
+  .action-card .a-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #202124;
+    margin-bottom: 6px;
+  }
+  .action-card .a-detail {
+    font-size: 13px;
+    color: #5f6368;
+    line-height: 1.7;
+  }
+  .action-card .a-detail strong { color: #202124; }
+  .action-card.p0 { border-left-color: #ea4335; }
+  .action-card.p1 { border-left-color: #1a73e8; }
+  .action-card.p2 { border-left-color: #9aa0a6; }
+
+  /* ===== Section Nav ===== */
+  .section-nav {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    border-bottom: 1px solid #e8eaed;
+    padding: 12px 0;
+    margin-bottom: 24px;
+    z-index: 10;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .section-nav a {
+    font-size: 13px;
+    color: #5f6368;
+    text-decoration: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .section-nav a:hover { background: #e8f0fe; color: #1a73e8; }
+
+  /* ===== Appendix ===== */
+  .appendix {
+    background: #f8f9fa;
+    border-top: 2px solid #e8eaed;
+    padding-top: 24px;
+    margin-top: 40px;
+  }
+  .appendix h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #5f6368;
+    margin-bottom: 12px;
+  }
+  .appendix p, .appendix li {
+    font-size: 13px;
+    color: #5f6368;
+    line-height: 1.8;
+  }
+
+  /* ===== FAB + Doc Panel ===== */
+  .doc-fab {
+    position: fixed; bottom: 32px; right: 32px; z-index: 1000;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #1a73e8; color: #fff; border: none; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(26,115,232,0.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+  }
+  .doc-fab:hover { background: #4a90e2; transform: scale(1.08); }
+  .doc-fab svg { width: 22px; height: 22px; stroke: #fff; stroke-width: 2; fill: none; }
+  .doc-fab-label {
+    position: absolute; right: 56px; background: #333; color: #fff;
+    font-size: 13px; padding: 4px 12px; border-radius: 4px;
+    white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .doc-fab:hover .doc-fab-label { opacity: 1; }
+
+  .doc-panel-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 1001;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .doc-panel-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .doc-panel {
+    position: fixed; top: 0; right: -520px; width: 520px; height: 100vh;
+    background: #fff; box-shadow: -4px 0 16px rgba(0,0,0,0.1);
+    z-index: 1002; display: flex; flex-direction: column;
+    transition: right 0.3s ease;
+  }
+  .doc-panel.open { right: 0; }
+  .doc-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
+  }
+  .doc-panel-header h3 { font-size: 16px; font-weight: 600; color: #333; }
+  .doc-panel-header-actions { display: flex; gap: 8px; }
+  .doc-panel-btn {
+    height: 32px; padding: 4px 14px; font-size: 13px; border-radius: 4px;
+    cursor: pointer; border: 1px solid #d9d9d9; background: #fff; color: #333;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .doc-panel-btn:hover { color: #1a73e8; border-color: #1a73e8; }
+  .doc-panel-btn.copied { background: #34a853; color: #fff; border-color: #34a853; }
+  .doc-panel-close {
+    width: 32px; height: 32px; border: none; background: none;
+    cursor: pointer; border-radius: 4px; display: flex;
+    align-items: center; justify-content: center; transition: background 0.2s;
+    font-size: 18px; color: #999;
+  }
+  .doc-panel-close:hover { background: #f0f0f0; }
+  .doc-panel-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .doc-panel-body pre {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px; line-height: 1.8; color: #333;
+    white-space: pre-wrap; word-wrap: break-word; margin: 0;
+  }
+
+  /* ===== Print ===== */
+  @media print {
+    .doc-fab, .doc-panel-overlay, .doc-panel, .section-nav { display: none !important; }
+    .report { padding: 20px; }
+    .card { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+  }
+</style>
+</head>
+<body>
+
+<div class="report">
+
+  <!-- Header -->
+  <div class="report-header">
+    <h1>{{REPORT_TITLE}}</h1>
+    <div class="report-meta">
+      <span>分析日期：{{DATE}}</span>
+      <span>数据范围：{{DATA_RANGE}}</span>
+      <span>版本：v1.0</span>
+    </div>
+  </div>
+
+  <!-- Section Nav -->
+  <nav class="section-nav">
+    <a href="#summary">执行摘要</a>
+    <a href="#health">数据健康度</a>
+    <a href="#metrics">指标拆解</a>
+    <a href="#analysis">分析详情</a>
+    <a href="#hypothesis">假设列表</a>
+    <a href="#actions">行动建议</a>
+    <a href="#experiment">验证计划</a>
+    <a href="#appendix">附录</a>
+  </nav>
+
+  <!-- 1. Executive Summary -->
+  <div class="exec-summary" id="summary">
+    <h2>执行摘要</h2>
+    <ul>
+      <li>{{FINDING_1}}</li>
+      <li>{{FINDING_2}}</li>
+      <li>{{FINDING_3}}</li>
+    </ul>
+  </div>
+
+  <!-- 2. Data Health -->
+  <div class="card" id="health">
+    <h2>数据健康度</h2>
+    <div class="health-grid">
+      <div class="health-item health-green">完整性 ✓</div>
+      <div class="health-item health-green">一致性 ✓</div>
+      <div class="health-item health-green">时效性 ✓</div>
+      <div class="health-item health-green">口径 ✓</div>
+      <div class="health-item health-green">异常值 ✓</div>
+      <div class="health-item health-green">样本量 ✓</div>
+    </div>
+  </div>
+
+  <!-- 3. Metric Tree -->
+  <div class="card" id="metrics">
+    <h2>指标拆解</h2>
+    <div class="tree-node">
+      <div class="tree-item highlight">
+        <span class="label">核心指标</span>
+        <span class="value">-10%</span>
+      </div>
+      <div class="tree-children">
+        <div class="tree-item">
+          <span class="label">子指标 A</span>
+          <span class="value">-3%</span>
+        </div>
+        <div class="tree-item highlight">
+          <span class="label">子指标 B</span>
+          <span class="value">-7%</span>
+        </div>
+      </div>
+    </div>
+    <!-- 图表区域 -->
+    <div class="chart-container">
+      <canvas id="metricTreeChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 4. Analysis Details -->
+  <div class="card" id="analysis">
+    <h2>分析详情</h2>
+
+    <h3>漏斗分析</h3>
+    <div class="chart-container">
+      <canvas id="funnelChart"></canvas>
+    </div>
+
+    <h3>留存分析</h3>
+    <div class="chart-container">
+      <canvas id="retentionChart"></canvas>
+    </div>
+
+    <h3>分群对比</h3>
+    <div class="chart-row">
+      <div class="chart-container">
+        <canvas id="segmentChart1"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="segmentChart2"></canvas>
+      </div>
+    </div>
+
+    <h3>时间趋势</h3>
+    <div class="chart-container">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 5. Hypotheses -->
+  <div class="card" id="hypothesis">
+    <h2>假设列表</h2>
+
+    <div class="hypothesis-card">
+      <div class="h-title">H1: {{HYPOTHESIS_1_TITLE}}</div>
+      <div class="h-evidence">{{HYPOTHESIS_1_EVIDENCE}}</div>
+      <div class="h-tags">
+        <span class="tag tag-causal">⚡ 疑似因果</span>
+        <span class="tag tag-high">可信度：高</span>
+      </div>
+    </div>
+
+    <div class="hypothesis-card">
+      <div class="h-title">H2: {{HYPOTHESIS_2_TITLE}}</div>
+      <div class="h-evidence">{{HYPOTHESIS_2_EVIDENCE}}</div>
+      <div class="h-tags">
+        <span class="tag tag-corr">🔗 相关性</span>
+        <span class="tag tag-mid">可信度：中</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Actions -->
+  <div class="card" id="actions">
+    <h2>行动建议</h2>
+
+    <div class="action-card p0">
+      <div class="a-title">A1: {{ACTION_1_TITLE}} <span class="tag tag-p0">P0</span></div>
+      <div class="a-detail">
+        <strong>对应假设：</strong>H1<br>
+        <strong>预期效果：</strong>{{ACTION_1_EXPECTED}}<br>
+        <strong>验证方式：</strong>{{ACTION_1_VALIDATION}}<br>
+        <strong>成功指标：</strong>{{ACTION_1_METRIC}}
+      </div>
+    </div>
+
+    <div class="action-card p1">
+      <div class="a-title">A2: {{ACTION_2_TITLE}} <span class="tag tag-p1">P1</span></div>
+      <div class="a-detail">
+        <strong>对应假设：</strong>H2<br>
+        <strong>预期效果：</strong>{{ACTION_2_EXPECTED}}<br>
+        <strong>验证方式：</strong>{{ACTION_2_VALIDATION}}<br>
+        <strong>成功指标：</strong>{{ACTION_2_METRIC}}
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Experiment -->
+  <div class="card" id="experiment">
+    <h2>验证计划</h2>
+    <table class="data-table">
+      <tr>
+        <th>实验名称</th>
+        <th>假设</th>
+        <th>核心指标</th>
+        <th>护栏指标</th>
+        <th>样本量</th>
+        <th>周期</th>
+        <th>决策规则</th>
+      </tr>
+      <tr>
+        <td>{{EXPERIMENT_NAME}}</td>
+        <td>{{EXPERIMENT_HYPOTHESIS}}</td>
+        <td>{{EXPERIMENT_PRIMARY_METRIC}}</td>
+        <td>{{EXPERIMENT_GUARD_METRIC}}</td>
+        <td>{{EXPERIMENT_SAMPLE}}</td>
+        <td>{{EXPERIMENT_DURATION}}</td>
+        <td>{{EXPERIMENT_RULE}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 8. Appendix -->
+  <div class="appendix" id="appendix">
+    <h2>附录</h2>
+    <h3>口径定义</h3>
+    <ul>
+      <li>{{METRIC_DEF_1}}</li>
+      <li>{{METRIC_DEF_2}}</li>
+    </ul>
+    <h3>数据来源</h3>
+    <ul>
+      <li>{{DATA_SOURCE_1}}</li>
+    </ul>
+    <h3>已知限制</h3>
+    <ul>
+      <li>{{LIMITATION_1}}</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- FAB Button -->
+<button class="doc-fab" id="docFab">
+  <span class="doc-fab-label">分析文档</span>
+  <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+</button>
+
+<!-- Doc Panel -->
+<div class="doc-panel-overlay" id="docOverlay"></div>
+<div class="doc-panel" id="docPanel">
+  <div class="doc-panel-header">
+    <h3>分析文档</h3>
+    <div class="doc-panel-header-actions">
+      <button class="doc-panel-btn" id="docCopyBtn">复制 Markdown</button>
+      <button class="doc-panel-close" id="docCloseBtn">×</button>
+    </div>
+  </div>
+  <div class="doc-panel-body">
+    <pre id="docContent"></pre>
+  </div>
+</div>
+
+<script>
+// ===== Charts (示例，生成时替换为实际数据) =====
+
+// 共用配色
+const COLORS = {
+  primary: '#1a73e8',
+  success: '#34a853',
+  danger: '#ea4335',
+  warning: '#fbbc04',
+  gray: '#9aa0a6',
+  blue1: '#4285f4',
+  blue2: '#7baaf7',
+  blue3: '#aecbfa',
+  green1: '#34a853',
+  green2: '#81c995',
+  green3: '#c4edc8',
+  red1: '#ea4335',
+  red2: '#f28b82',
+  red3: '#fad2cf'
+};
+
+// 趋势图
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8'],
+    datasets: [{
+      label: '当前周期',
+      data: [100, 98, 95, 92, 88, 85, 82, 80],
+      borderColor: COLORS.primary,
+      backgroundColor: 'rgba(26,115,232,0.1)',
+      fill: true,
+      tension: 0.3
+    }, {
+      label: '上一周期',
+      data: [95, 96, 97, 98, 97, 96, 95, 94],
+      borderColor: COLORS.gray,
+      borderDash: [5, 5],
+      tension: 0.3
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom' } },
+    scales: { y: { beginAtZero: false } }
+  }
+});
+
+// ===== Doc Panel =====
+const docFab = document.getElementById('docFab');
+const docOverlay = document.getElementById('docOverlay');
+const docPanel = document.getElementById('docPanel');
+const docCloseBtn = document.getElementById('docCloseBtn');
+const docCopyBtn = document.getElementById('docCopyBtn');
+const docContent = document.getElementById('docContent');
+
+// {{DESIGN_DOC_MARKDOWN}} — 生成时替换为实际 Markdown 内容
+const designDocMarkdown = `# {{REPORT_TITLE}} · 分析文档
+
+> 日期：{{DATE}} | 数据范围：{{DATA_RANGE}} | 版本：v1.0
+
+---
+
+## 1. 分析目标
+{{ANALYSIS_GOAL}}
+
+## 2. 数据健康度
+{{DATA_HEALTH_SUMMARY}}
+
+## 3. 指标拆解
+{{METRIC_DECOMPOSITION}}
+
+## 4. 分析发现
+{{FINDINGS}}
+
+## 5. 假设列表
+
+| # | 假设 | 证据 | 关系类型 | 可信度 | 验证方式 |
+|---|------|------|----------|--------|----------|
+| H1 | ... | ... | ⚡/🔗/✅ | 高/中/低 | ... |
+
+## 6. 行动建议
+
+| # | 建议 | 对应假设 | 预期效果 | 优先级 | 验证方式 |
+|---|------|----------|----------|--------|----------|
+| A1 | ... | H1 | ... | P0 | ... |
+
+## 7. 验证计划
+{{EXPERIMENT_PLAN}}
+
+## 8. 口径说明
+{{METRIC_DEFINITIONS}}`;
+
+docContent.textContent = designDocMarkdown;
+
+function openDocPanel() {
+  docPanel.classList.add('open');
+  docOverlay.classList.add('open');
+}
+function closeDocPanel() {
+  docPanel.classList.remove('open');
+  docOverlay.classList.remove('open');
+}
+
+docFab.addEventListener('click', openDocPanel);
+docCloseBtn.addEventListener('click', closeDocPanel);
+docOverlay.addEventListener('click', closeDocPanel);
+
+docCopyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(designDocMarkdown).then(() => {
+    docCopyBtn.textContent = '已复制';
+    docCopyBtn.classList.add('copied');
+    setTimeout(() => {
+      docCopyBtn.textContent = '复制 Markdown';
+      docCopyBtn.classList.remove('copied');
+    }, 2000);
+  });
+});
+</script>
+
+</body>
+</html>

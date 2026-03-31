@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{PRODUCT_NAME}} Q{{QUARTER}} 路线图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f8f9fa; color: #202124; line-height: 1.6;
+  }
+
+  .roadmap { max-width: 1200px; margin: 0 auto; padding: 40px 48px 80px; }
+
+  /* ===== Header ===== */
+  .roadmap-header { margin-bottom: 32px; border-bottom: 2px solid #1a73e8; padding-bottom: 20px; }
+  .roadmap-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .roadmap-meta { display: flex; gap: 24px; font-size: 14px; color: #5f6368; flex-wrap: wrap; }
+
+  /* ===== KPI Bar ===== */
+  .kpi-bar {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .kpi-card {
+    background: #fff; border-radius: 8px; border: 1px solid #e8eaed;
+    padding: 16px 20px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .kpi-card .kpi-value { font-size: 28px; font-weight: 700; color: #1a73e8; }
+  .kpi-card .kpi-label { font-size: 13px; color: #5f6368; margin-top: 4px; }
+
+  /* ===== Nav ===== */
+  .section-nav {
+    position: sticky; top: 0; background: #fff;
+    border-bottom: 1px solid #e8eaed; padding: 10px 0;
+    margin-bottom: 24px; z-index: 10;
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  .section-nav a {
+    font-size: 13px; color: #5f6368; text-decoration: none;
+    padding: 4px 12px; border-radius: 4px; transition: all 0.15s;
+  }
+  .section-nav a:hover { background: #e8f0fe; color: #1a73e8; }
+
+  /* ===== Cards ===== */
+  .card {
+    background: #fff; border-radius: 8px;
+    border: 1px solid #e8eaed; padding: 24px;
+    margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    font-size: 18px; font-weight: 600;
+    margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;
+  }
+
+  /* ===== Tables ===== */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+  .data-table th {
+    background: #f8f9fa; text-align: left;
+    padding: 10px 14px; border-bottom: 2px solid #e8eaed;
+    font-weight: 600; color: #5f6368; font-size: 13px; white-space: nowrap;
+  }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .data-table tr:nth-child(even) td { background: #fafbfc; }
+  .data-table tr:hover td { background: #e8f0fe; }
+
+  /* ===== Tags ===== */
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+  .tag-p0 { background: #fce8e6; color: #c5221f; }
+  .tag-p1 { background: #e8f0fe; color: #1a73e8; }
+  .tag-p2 { background: #f1f3f4; color: #5f6368; }
+  .tag-pending { background: #e8f0fe; color: #1a73e8; }
+  .tag-active { background: #fef7e0; color: #b06000; }
+  .tag-done { background: #e6f4ea; color: #137333; }
+  .tag-delayed { background: #fce8e6; color: #c5221f; }
+  .tag-cancelled { background: #f1f3f4; color: #9aa0a6; }
+
+  /* ===== Gantt Chart ===== */
+  .gantt { margin: 16px 0; overflow-x: auto; }
+  .gantt-header {
+    display: flex; border-bottom: 2px solid #e8eaed; padding-bottom: 8px; margin-bottom: 4px;
+  }
+  .gantt-label-col { width: 200px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: #5f6368; }
+  .gantt-timeline { flex: 1; display: flex; }
+  .gantt-week {
+    flex: 1; text-align: center; font-size: 12px; color: #9aa0a6;
+    border-left: 1px solid #f0f0f0; padding: 0 4px;
+  }
+  .gantt-row {
+    display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f8f9fa;
+  }
+  .gantt-label {
+    width: 200px; flex-shrink: 0; font-size: 13px; color: #333;
+    padding-right: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .gantt-bar-area { flex: 1; position: relative; height: 28px; display: flex; }
+  .gantt-bar {
+    position: absolute; height: 24px; border-radius: 4px;
+    display: flex; align-items: center; padding: 0 8px;
+    font-size: 11px; color: #fff; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: opacity 0.15s; cursor: pointer;
+  }
+  .gantt-bar:hover { opacity: 0.85; }
+  .gantt-bar.team-a { background: #1a73e8; }
+  .gantt-bar.team-b { background: #34a853; }
+  .gantt-bar.team-c { background: #fbbc04; color: #333; }
+  .gantt-bar.team-d { background: #ea4335; }
+  .gantt-bar.team-e { background: #9c27b0; }
+  .gantt-milestone {
+    position: absolute; top: 2px; width: 24px; height: 24px;
+    background: #333; transform: rotate(45deg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gantt-week-col {
+    flex: 1; border-left: 1px solid #f8f9fa; height: 28px;
+  }
+  .gantt-today {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: #ea4335; z-index: 1;
+  }
+  .gantt-legend {
+    display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap;
+  }
+  .gantt-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5f6368; }
+  .gantt-legend-color { width: 16px; height: 12px; border-radius: 2px; }
+  .gantt-legend-milestone { width: 12px; height: 12px; background: #333; transform: rotate(45deg); }
+
+  /* ===== Dependency Swimlane ===== */
+  .swimlane { margin: 16px 0; }
+  .swimlane-row {
+    display: flex; align-items: stretch; margin: 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .swimlane-label {
+    width: 100px; flex-shrink: 0; font-size: 13px; font-weight: 600;
+    color: #5f6368; padding: 12px 16px 12px 0; text-align: right;
+    border-right: 2px solid #e8eaed;
+  }
+  .swimlane-content { padding: 8px 16px; flex: 1; display: flex; gap: 8px; flex-wrap: wrap; }
+  .swimlane-epic {
+    padding: 6px 14px; border-radius: 4px; font-size: 13px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .swimlane-epic.dep-arrow { font-size: 16px; color: #9aa0a6; }
+
+  /* ===== Risk Matrix ===== */
+  .risk-matrix {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 2px; margin: 16px 0; font-size: 13px;
+  }
+  .risk-cell {
+    padding: 12px; text-align: center; border-radius: 4px;
+  }
+  .risk-high { background: #fce8e6; color: #c5221f; }
+  .risk-medium { background: #fef7e0; color: #b06000; }
+  .risk-low { background: #e6f4ea; color: #137333; }
+  .risk-axis { background: #f8f9fa; color: #5f6368; font-weight: 600; }
+  .risk-corner { background: #fff; }
+
+  /* ===== Buffer Chart ===== */
+  .buffer-bar {
+    display: flex; height: 40px; border-radius: 6px; overflow: hidden; margin: 16px 0;
+  }
+  .buffer-segment {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500; color: #fff; transition: opacity 0.15s;
+  }
+  .buffer-segment:hover { opacity: 0.85; }
+
+  /* ===== Milestone Timeline ===== */
+  .milestone-timeline { margin: 16px 0; }
+  .ms-row { display: flex; align-items: stretch; }
+  .ms-date {
+    width: 120px; flex-shrink: 0; font-size: 13px; color: #5f6368;
+    padding: 12px 16px 12px 0; text-align: right;
+    border-right: 2px solid #1a73e8;
+  }
+  .ms-content { padding: 12px 16px; flex: 1; }
+  .ms-content h4 { font-size: 14px; font-weight: 600; }
+  .ms-content p { font-size: 13px; color: #5f6368; margin-top: 4px; }
+  .ms-metric {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 12px; background: #e8f0fe; color: #1a73e8; margin: 4px 4px 0 0;
+  }
+
+  /* ===== Capacity Gauge ===== */
+  .capacity-gauge {
+    display: flex; align-items: center; gap: 16px; margin: 16px 0;
+  }
+  .gauge-bar {
+    flex: 1; height: 32px; background: #f1f3f4; border-radius: 16px; overflow: hidden;
+    position: relative;
+  }
+  .gauge-fill {
+    height: 100%; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: #fff;
+    transition: width 0.3s;
+  }
+  .gauge-fill.green { background: #34a853; }
+  .gauge-fill.yellow { background: #fbbc04; color: #333; }
+  .gauge-fill.red { background: #ea4335; }
+  .gauge-label { font-size: 14px; color: #333; width: 80px; flex-shrink: 0; }
+
+  /* ===== Checklist ===== */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    padding: 6px 0; font-size: 14px;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .checklist li input[type="checkbox"] { margin-top: 4px; flex-shrink: 0; accent-color: #1a73e8; }
+
+  /* ===== FAB + Doc Panel ===== */
+  .doc-fab {
+    position: fixed; bottom: 32px; right: 32px; z-index: 1000;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #1a73e8; color: #fff; border: none; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(26,115,232,0.4);
+    display: flex; align-items: center; justify-content: center; transition: all 0.3s;
+  }
+  .doc-fab:hover { background: #4a90e2; transform: scale(1.08); }
+  .doc-fab svg { width: 22px; height: 22px; stroke: #fff; stroke-width: 2; fill: none; }
+  .doc-fab-label {
+    position: absolute; right: 56px; background: #333; color: #fff;
+    font-size: 13px; padding: 4px 12px; border-radius: 4px;
+    white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .doc-fab:hover .doc-fab-label { opacity: 1; }
+  .doc-panel-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 1001;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .doc-panel-overlay.open { opacity: 1; pointer-events: auto; }
+  .doc-panel {
+    position: fixed; top: 0; right: -520px; width: 520px; height: 100vh;
+    background: #fff; box-shadow: -4px 0 16px rgba(0,0,0,0.1);
+    z-index: 1002; display: flex; flex-direction: column; transition: right 0.3s ease;
+  }
+  .doc-panel.open { right: 0; }
+  .doc-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
+  }
+  .doc-panel-header h3 { font-size: 16px; font-weight: 600; color: #333; }
+  .doc-panel-header-actions { display: flex; gap: 8px; }
+  .doc-panel-btn {
+    height: 32px; padding: 4px 14px; font-size: 13px; border-radius: 4px;
+    cursor: pointer; border: 1px solid #d9d9d9; background: #fff; color: #333;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .doc-panel-btn:hover { color: #1a73e8; border-color: #1a73e8; }
+  .doc-panel-btn.copied { background: #34a853; color: #fff; border-color: #34a853; }
+  .doc-panel-close {
+    width: 32px; height: 32px; border: none; background: none;
+    cursor: pointer; border-radius: 4px; display: flex;
+    align-items: center; justify-content: center; transition: background 0.2s;
+    font-size: 18px; color: #999;
+  }
+  .doc-panel-close:hover { background: #f0f0f0; }
+  .doc-panel-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .doc-panel-body pre {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px; line-height: 1.8; color: #333;
+    white-space: pre-wrap; word-wrap: break-word; margin: 0;
+  }
+
+  @media print {
+    .doc-fab, .doc-panel-overlay, .doc-panel, .section-nav { display: none !important; }
+    .roadmap { padding: 20px; }
+    .card { break-inside: avoid; box-shadow: none; }
+    .kpi-bar { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 768px) {
+    .roadmap { padding: 16px; }
+    .gantt-label-col, .gantt-label { width: 100px; font-size: 11px; }
+    .kpi-bar { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="roadmap">
+
+  <!-- Header -->
+  <div class="roadmap-header">
+    <h1>{{PRODUCT_NAME}} Q{{QUARTER}} 路线图</h1>
+    <div class="roadmap-meta">
+      <span>版本：v1.0</span>
+      <span>日期：{{DATE}}</span>
+      <span>负责人：{{OWNER}}</span>
+      <span>周期：{{START_DATE}} ~ {{END_DATE}}（{{TOTAL_WEEKS}} 周）</span>
+    </div>
+  </div>
+
+  <!-- KPI Bar -->
+  <div class="kpi-bar">
+    <div class="kpi-card">
+      <div class="kpi-value">{{TOTAL_EPICS}}</div>
+      <div class="kpi-label">Epic 总数</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{TOTAL_CAPACITY}} 人天</div>
+      <div class="kpi-label">团队总产能</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{BUFFER_PERCENT}}%</div>
+      <div class="kpi-label">缓冲预留</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">{{RISK_COUNT}}</div>
+      <div class="kpi-label">高风险项</div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="section-nav">
+    <a href="#goals">季度目标</a>
+    <a href="#gantt">甘特图</a>
+    <a href="#milestones">里程碑</a>
+    <a href="#dependencies">依赖关系</a>
+    <a href="#capacity">产能分配</a>
+    <a href="#risks">风险矩阵</a>
+    <a href="#buffer">缓冲策略</a>
+    <a href="#changelog">变更记录</a>
+  </nav>
+
+  <!-- 1. Goals -->
+  <div class="card" id="goals">
+    <h2>季度目标（OKR）</h2>
+    <table class="data-table">
+      <tr><th>#</th><th>目标（O）</th><th>关键结果（KR）</th><th>优先级</th><th>Epic</th></tr>
+      <tr>
+        <td rowspan="2">O1</td>
+        <td rowspan="2">{{OBJECTIVE_1}}</td>
+        <td>KR1: {{KR_1}}</td>
+        <td><span class="tag tag-p0">P0</span></td>
+        <td>Epic 1, 2</td>
+      </tr>
+      <tr>
+        <td>KR2: {{KR_2}}</td>
+        <td><span class="tag tag-p0">P0</span></td>
+        <td>Epic 3</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 2. Gantt -->
+  <div class="card" id="gantt">
+    <h2>甘特图</h2>
+    <div class="gantt">
+      <div class="gantt-header">
+        <div class="gantt-label-col">Epic</div>
+        <div class="gantt-timeline" id="ganttTimeline"></div>
+      </div>
+      <div id="ganttBody"></div>
+      <div class="gantt-legend">
+        <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#1a73e8"></div>{{TEAM_A}}</div>
+        <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#34a853"></div>{{TEAM_B}}</div>
+        <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#fbbc04"></div>{{TEAM_C}}</div>
+        <div class="gantt-legend-item"><div class="gantt-legend-milestone"></div>里程碑</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Milestones -->
+  <div class="card" id="milestones">
+    <h2>里程碑</h2>
+    <div class="milestone-timeline">
+      <div class="ms-row">
+        <div class="ms-date">第 {{W1}} 周<br><small>{{M1_DATE}}</small></div>
+        <div class="ms-content">
+          <h4>M1: {{MILESTONE_1}} <span class="tag tag-pending">未开始</span></h4>
+          <p>{{M1_DESC}}</p>
+          <span class="ms-metric">北极星：{{M1_NORTH_STAR}}</span>
+          <span class="ms-metric">护栏：{{M1_GUARD}}</span>
+        </div>
+      </div>
+      <div class="ms-row">
+        <div class="ms-date">第 {{W2}} 周<br><small>{{M2_DATE}}</small></div>
+        <div class="ms-content">
+          <h4>M2: {{MILESTONE_2}} <span class="tag tag-pending">未开始</span></h4>
+          <p>{{M2_DESC}}</p>
+          <span class="ms-metric">北极星：{{M2_NORTH_STAR}}</span>
+          <span class="ms-metric">护栏：{{M2_GUARD}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Dependencies -->
+  <div class="card" id="dependencies">
+    <h2>依赖关系</h2>
+    <div class="swimlane">
+      <div class="swimlane-row">
+        <div class="swimlane-label">{{TEAM_A}}</div>
+        <div class="swimlane-content">
+          <span class="swimlane-epic" style="background:#e8f0fe;color:#1a73e8">Epic 1</span>
+          <span class="swimlane-epic dep-arrow">→</span>
+          <span class="swimlane-epic" style="background:#e8f0fe;color:#1a73e8">Epic 3</span>
+        </div>
+      </div>
+      <div class="swimlane-row">
+        <div class="swimlane-label">{{TEAM_B}}</div>
+        <div class="swimlane-content">
+          <span class="swimlane-epic" style="background:#e6f4ea;color:#137333">Epic 2</span>
+          <span class="swimlane-epic dep-arrow">→</span>
+          <span class="swimlane-epic" style="background:#e6f4ea;color:#137333">Epic 4</span>
+        </div>
+      </div>
+    </div>
+    <h3>关键路径</h3>
+    <div style="font-size:14px;color:#c5221f;font-weight:600;margin:8px 0;">
+      {{CRITICAL_PATH_DESCRIPTION}}
+    </div>
+  </div>
+
+  <!-- 5. Capacity -->
+  <div class="card" id="capacity">
+    <h2>产能分配</h2>
+    <table class="data-table">
+      <tr><th>团队</th><th>人数</th><th>迭代产能</th><th>季度产能</th><th>已分配</th><th>剩余</th></tr>
+      <tr>
+        <td>{{TEAM_A}}</td>
+        <td>{{TEAM_A_SIZE}}</td>
+        <td>{{TEAM_A_SPRINT}} 人天</td>
+        <td>{{TEAM_A_TOTAL}} 人天</td>
+        <td>{{TEAM_A_ALLOCATED}} 人天</td>
+        <td>{{TEAM_A_REMAINING}} 人天</td>
+      </tr>
+    </table>
+
+    <h3>产能利用率</h3>
+    <div class="capacity-gauge">
+      <div class="gauge-label">总体</div>
+      <div class="gauge-bar">
+        <div class="gauge-fill green" style="width:75%">{{UTILIZATION}}%</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#5f6368;margin-top:4px;">
+      ✓ 产能利用率在 70-85% 区间，预留了足够缓冲。超过 90% 建议削减需求。
+    </p>
+  </div>
+
+  <!-- 6. Risks -->
+  <div class="card" id="risks">
+    <h2>风险矩阵</h2>
+    <table class="data-table">
+      <tr><th>风险</th><th>概率</th><th>影响</th><th>等级</th><th>缓解措施</th><th>预案</th><th>负责人</th></tr>
+      <tr>
+        <td>{{RISK_1}}</td>
+        <td>{{RISK_1_PROB}}</td>
+        <td>{{RISK_1_IMPACT}}</td>
+        <td><span class="tag tag-p0">高</span></td>
+        <td>{{RISK_1_MITIGATION}}</td>
+        <td>{{RISK_1_PLAN_B}}</td>
+        <td>{{RISK_1_OWNER}}</td>
+      </tr>
+    </table>
+
+    <h3>风险热力图</h3>
+    <div style="font-size:13px;color:#5f6368;margin-bottom:8px;text-align:center;">影响 →</div>
+    <div class="risk-matrix">
+      <div class="risk-corner"></div>
+      <div class="risk-axis">影响低</div>
+      <div class="risk-axis">影响高</div>
+      <div class="risk-axis">概率高</div>
+      <div class="risk-cell risk-medium">🟡 中</div>
+      <div class="risk-cell risk-high">🔴 高</div>
+      <div class="risk-axis">概率低</div>
+      <div class="risk-cell risk-low">🟢 低</div>
+      <div class="risk-cell risk-medium">🟡 中</div>
+    </div>
+  </div>
+
+  <!-- 7. Buffer -->
+  <div class="card" id="buffer">
+    <h2>缓冲策略</h2>
+    <div class="buffer-bar">
+      <div class="buffer-segment" style="width:70%;background:#1a73e8;">确定性需求 70%</div>
+      <div class="buffer-segment" style="width:15%;background:#fbbc04;color:#333;">缓冲 15%</div>
+      <div class="buffer-segment" style="width:15%;background:#34a853;">弹性需求 15%</div>
+    </div>
+    <table class="data-table">
+      <tr><th>缓冲类型</th><th>占比</th><th>人天</th><th>用途</th></tr>
+      <tr><td>风险应对</td><td>{{RISK_BUFFER}}%</td><td>{{RISK_BUFFER_DAYS}}</td><td>处理已识别风险</td></tr>
+      <tr><td>突发需求</td><td>{{SURPRISE_BUFFER}}%</td><td>{{SURPRISE_BUFFER_DAYS}}</td><td>应急插入需求</td></tr>
+      <tr><td>弹性需求（P2）</td><td>{{STRETCH_BUFFER}}%</td><td>{{STRETCH_BUFFER_DAYS}}</td><td>有余力就做</td></tr>
+    </table>
+  </div>
+
+  <!-- 8. Changelog -->
+  <div class="card" id="changelog">
+    <h2>变更记录</h2>
+    <table class="data-table">
+      <tr><th>版本</th><th>日期</th><th>变更内容</th><th>影响</th></tr>
+      <tr><td>v1.0</td><td>{{DATE}}</td><td>初始版本</td><td>—</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<!-- FAB -->
+<button class="doc-fab" id="docFab">
+  <span class="doc-fab-label">路线图文档</span>
+  <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+</button>
+
+<!-- Panel -->
+<div class="doc-panel-overlay" id="docOverlay"></div>
+<div class="doc-panel" id="docPanel">
+  <div class="doc-panel-header">
+    <h3>路线图文档</h3>
+    <div class="doc-panel-header-actions">
+      <button class="doc-panel-btn" id="docCopyBtn">复制 Markdown</button>
+      <button class="doc-panel-close" id="docCloseBtn">×</button>
+    </div>
+  </div>
+  <div class="doc-panel-body">
+    <pre id="docContent"></pre>
+  </div>
+</div>
+
+<script>
+// ===== Gantt Renderer =====
+(function() {
+  const totalWeeks = {{TOTAL_WEEKS}};
+  const timeline = document.getElementById('ganttTimeline');
+  for (let i = 1; i <= totalWeeks; i++) {
+    const week = document.createElement('div');
+    week.className = 'gantt-week';
+    week.textContent = 'W' + i;
+    timeline.appendChild(week);
+  }
+
+  // Epic data — 生成时替换
+  const epics = [
+    { name: '{{EPIC_1_NAME}}', start: 0, duration: 2, team: 'team-a' },
+    { name: '{{EPIC_2_NAME}}', start: 0, duration: 3, team: 'team-b' },
+    { name: '{{EPIC_3_NAME}}', start: 2, duration: 2, team: 'team-a' },
+    { name: '{{EPIC_4_NAME}}', start: 3, duration: 2, team: 'team-b' },
+  ];
+
+  const milestones = [
+    { week: 2, name: 'M1' },
+    { week: 5, name: 'M2' },
+    { week: 8, name: 'M3' },
+  ];
+
+  const body = document.getElementById('ganttBody');
+  epics.forEach(epic => {
+    const row = document.createElement('div');
+    row.className = 'gantt-row';
+
+    const label = document.createElement('div');
+    label.className = 'gantt-label';
+    label.textContent = epic.name;
+    row.appendChild(label);
+
+    const barArea = document.createElement('div');
+    barArea.className = 'gantt-bar-area';
+
+    // Week columns for grid lines
+    for (let i = 0; i < totalWeeks; i++) {
+      const col = document.createElement('div');
+      col.className = 'gantt-week-col';
+      barArea.appendChild(col);
+    }
+
+    // Bar
+    const bar = document.createElement('div');
+    bar.className = 'gantt-bar ' + epic.team;
+    bar.style.left = (epic.start / totalWeeks * 100) + '%';
+    bar.style.width = (epic.duration / totalWeeks * 100) + '%';
+    bar.textContent = epic.name;
+    bar.title = epic.name + ' (W' + (epic.start+1) + ' - W' + (epic.start + epic.duration) + ')';
+    barArea.appendChild(bar);
+
+    row.appendChild(barArea);
+    body.appendChild(row);
+  });
+})();
+
+// ===== Doc Panel =====
+const docFab = document.getElementById('docFab');
+const docOverlay = document.getElementById('docOverlay');
+const docPanel = document.getElementById('docPanel');
+const docCloseBtn = document.getElementById('docCloseBtn');
+const docCopyBtn = document.getElementById('docCopyBtn');
+const docContent = document.getElementById('docContent');
+
+const designDocMarkdown = `# {{PRODUCT_NAME}} Q{{QUARTER}} 路线图
+
+> 日期：{{DATE}} | 版本：v1.0 | 负责人：{{OWNER}}
+
+---
+
+## 1. 季度目标
+
+| # | 目标 | 关键结果 | 优先级 |
+|---|------|----------|--------|
+| O1 | ... | KR1: ... | P0 |
+
+## 2. Epic 拆解
+
+| Epic | 周期 | 团队 | 依赖 | 优先级 |
+|------|------|------|------|--------|
+| ... | ... | ... | ... | ... |
+
+## 3. 里程碑
+
+| 里程碑 | 日期 | 交付物 | 成功指标 |
+|--------|------|--------|----------|
+| M1 | ... | ... | ... |
+
+## 4. 关键路径
+{{CRITICAL_PATH}}
+
+## 5. 产能分配
+- 总产能：{{TOTAL_CAPACITY}} 人天
+- 已分配：{{ALLOCATED}}%
+- 缓冲：{{BUFFER}}%
+
+## 6. 风险矩阵
+
+| 风险 | 概率 | 影响 | 等级 | 缓解 |
+|------|------|------|------|------|
+| ... | ... | ... | ... | ... |
+
+## 7. 缓冲策略
+- 确定性需求：70%
+- 风险缓冲：15%
+- 弹性需求：15%
+
+## 8. 变更记录
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| v1.0 | {{DATE}} | 初始版本 |`;
+
+docContent.textContent = designDocMarkdown;
+
+function openDocPanel() { docPanel.classList.add('open'); docOverlay.classList.add('open'); }
+function closeDocPanel() { docPanel.classList.remove('open'); docOverlay.classList.remove('open'); }
+
+docFab.addEventListener('click', openDocPanel);
+docCloseBtn.addEventListener('click', closeDocPanel);
+docOverlay.addEventListener('click', closeDocPanel);
+
+docCopyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(designDocMarkdown).then(() => {
+    docCopyBtn.textContent = '已复制';
+    docCopyBtn.classList.add('copied');
+    setTimeout(() => { docCopyBtn.textContent = '复制 Markdown'; docCopyBtn.classList.remove('copied'); }, 2000);
+  });
+});
+</script>
+
+</body>
+</html>

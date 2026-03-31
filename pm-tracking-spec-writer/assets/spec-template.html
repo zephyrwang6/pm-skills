@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{SPEC_TITLE}} - 埋点方案</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f8f9fa;
+    color: #202124;
+    line-height: 1.6;
+  }
+
+  /* ===== Container ===== */
+  .spec { max-width: 1100px; margin: 0 auto; padding: 40px 48px 80px; }
+
+  /* ===== Header ===== */
+  .spec-header {
+    margin-bottom: 32px;
+    border-bottom: 2px solid #1a73e8;
+    padding-bottom: 20px;
+  }
+  .spec-header h1 { font-size: 26px; font-weight: 700; color: #202124; margin-bottom: 8px; }
+  .spec-meta { display: flex; gap: 24px; font-size: 14px; color: #5f6368; flex-wrap: wrap; }
+
+  /* ===== Section Nav ===== */
+  .section-nav {
+    position: sticky; top: 0; background: #fff;
+    border-bottom: 1px solid #e8eaed; padding: 10px 0;
+    margin-bottom: 24px; z-index: 10;
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  .section-nav a {
+    font-size: 13px; color: #5f6368; text-decoration: none;
+    padding: 4px 12px; border-radius: 4px; transition: all 0.15s;
+  }
+  .section-nav a:hover { background: #e8f0fe; color: #1a73e8; }
+
+  /* ===== Cards ===== */
+  .card {
+    background: #fff; border-radius: 8px;
+    border: 1px solid #e8eaed; padding: 24px;
+    margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    font-size: 18px; font-weight: 600; color: #202124;
+    margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0;
+  }
+  .card h3 {
+    font-size: 15px; font-weight: 600; color: #333;
+    margin: 20px 0 8px; padding-top: 12px;
+    border-top: 1px dashed #e8eaed;
+  }
+  .card h3:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+
+  /* ===== Tables ===== */
+  .data-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 14px; margin: 12px 0;
+  }
+  .data-table th {
+    background: #f8f9fa; text-align: left;
+    padding: 10px 14px; border-bottom: 2px solid #e8eaed;
+    font-weight: 600; color: #5f6368; font-size: 13px;
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 10px 14px; border-bottom: 1px solid #f0f0f0;
+    color: #202124; vertical-align: top;
+  }
+  .data-table tr:nth-child(even) td { background: #fafbfc; }
+  .data-table tr:hover td { background: #e8f0fe; }
+  .data-table code {
+    background: #f1f3f4; padding: 1px 6px; border-radius: 3px;
+    font-size: 13px; color: #1a73e8; font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+
+  /* ===== Tags ===== */
+  .tag {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 12px; font-weight: 500;
+  }
+  .tag-required { background: #fce8e6; color: #c5221f; }
+  .tag-optional { background: #f1f3f4; color: #5f6368; }
+  .tag-client { background: #e8f0fe; color: #1a73e8; }
+  .tag-server { background: #e6f4ea; color: #137333; }
+  .tag-both { background: #fef7e0; color: #b06000; }
+  .tag-pass { background: #e6f4ea; color: #137333; }
+  .tag-warn { background: #fef7e0; color: #b06000; }
+  .tag-fail { background: #fce8e6; color: #c5221f; }
+
+  /* ===== Flow ===== */
+  .flow-chart {
+    background: #f8f9fa; border: 1px solid #e8eaed;
+    border-radius: 6px; padding: 20px 24px; margin: 16px 0;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 13px; line-height: 1.8; color: #333;
+    overflow-x: auto;
+  }
+
+  /* ===== Event Card ===== */
+  .event-card {
+    background: #f8f9fa; border: 1px solid #e8eaed;
+    border-radius: 6px; padding: 16px 20px; margin: 12px 0;
+    border-left: 4px solid #1a73e8;
+  }
+  .event-card .ev-title {
+    font-weight: 600; font-size: 15px; color: #202124;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .event-card .ev-title code { font-size: 14px; color: #1a73e8; }
+  .event-card .ev-meta {
+    font-size: 13px; color: #5f6368; margin-bottom: 12px;
+    display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .event-card .ev-desc {
+    font-size: 14px; color: #333; margin-bottom: 12px;
+    padding-left: 12px; border-left: 3px solid #e8eaed;
+  }
+
+  /* ===== Checklist ===== */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    padding: 6px 0; font-size: 14px; color: #333;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .checklist li input[type="checkbox"] {
+    margin-top: 4px; flex-shrink: 0; accent-color: #1a73e8;
+  }
+
+  /* ===== Code Block ===== */
+  .code-block {
+    background: #1e1e1e; color: #d4d4d4;
+    border-radius: 6px; padding: 16px 20px; margin: 12px 0;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 13px; line-height: 1.6;
+    overflow-x: auto;
+  }
+  .code-block .keyword { color: #569cd6; }
+  .code-block .string { color: #ce9178; }
+  .code-block .comment { color: #6a9955; }
+  .code-block .function { color: #dcdcaa; }
+
+  /* ===== Validation Result ===== */
+  .validation-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px; margin: 12px 0;
+  }
+  .validation-item {
+    padding: 12px 16px; border-radius: 6px;
+    border: 1px solid; font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .validation-pass { background: #e6f4ea; border-color: #ceead6; color: #137333; }
+  .validation-warn { background: #fef7e0; border-color: #fde293; color: #b06000; }
+  .validation-fail { background: #fce8e6; border-color: #f9dedc; color: #c5221f; }
+
+  /* ===== Filter Bar ===== */
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 4px 14px; font-size: 13px; border-radius: 16px;
+    cursor: pointer; border: 1px solid #d9d9d9; background: #fff;
+    color: #5f6368; transition: all 0.15s; font-family: inherit;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: #1a73e8; color: #fff; border-color: #1a73e8;
+  }
+
+  /* ===== FAB + Doc Panel ===== */
+  .doc-fab {
+    position: fixed; bottom: 32px; right: 32px; z-index: 1000;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #1a73e8; color: #fff; border: none; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(26,115,232,0.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+  }
+  .doc-fab:hover { background: #4a90e2; transform: scale(1.08); }
+  .doc-fab svg { width: 22px; height: 22px; stroke: #fff; stroke-width: 2; fill: none; }
+  .doc-fab-label {
+    position: absolute; right: 56px; background: #333; color: #fff;
+    font-size: 13px; padding: 4px 12px; border-radius: 4px;
+    white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .doc-fab:hover .doc-fab-label { opacity: 1; }
+  .doc-panel-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 1001;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .doc-panel-overlay.open { opacity: 1; pointer-events: auto; }
+  .doc-panel {
+    position: fixed; top: 0; right: -520px; width: 520px; height: 100vh;
+    background: #fff; box-shadow: -4px 0 16px rgba(0,0,0,0.1);
+    z-index: 1002; display: flex; flex-direction: column;
+    transition: right 0.3s ease;
+  }
+  .doc-panel.open { right: 0; }
+  .doc-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
+  }
+  .doc-panel-header h3 { font-size: 16px; font-weight: 600; color: #333; }
+  .doc-panel-header-actions { display: flex; gap: 8px; }
+  .doc-panel-btn {
+    height: 32px; padding: 4px 14px; font-size: 13px; border-radius: 4px;
+    cursor: pointer; border: 1px solid #d9d9d9; background: #fff; color: #333;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .doc-panel-btn:hover { color: #1a73e8; border-color: #1a73e8; }
+  .doc-panel-btn.copied { background: #34a853; color: #fff; border-color: #34a853; }
+  .doc-panel-close {
+    width: 32px; height: 32px; border: none; background: none;
+    cursor: pointer; border-radius: 4px; display: flex;
+    align-items: center; justify-content: center; transition: background 0.2s;
+    font-size: 18px; color: #999;
+  }
+  .doc-panel-close:hover { background: #f0f0f0; }
+  .doc-panel-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .doc-panel-body pre {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px; line-height: 1.8; color: #333;
+    white-space: pre-wrap; word-wrap: break-word; margin: 0;
+  }
+
+  /* ===== Print ===== */
+  @media print {
+    .doc-fab, .doc-panel-overlay, .doc-panel, .section-nav, .filter-bar { display: none !important; }
+    .spec { padding: 20px; }
+    .card { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+    .event-card { break-inside: avoid; }
+  }
+  @media (max-width: 768px) {
+    .spec { padding: 16px; }
+    .spec-header h1 { font-size: 20px; }
+    .spec-meta { flex-direction: column; gap: 4px; }
+    .validation-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="spec">
+
+  <!-- Header -->
+  <div class="spec-header">
+    <h1>{{SPEC_TITLE}} 埋点方案</h1>
+    <div class="spec-meta">
+      <span>版本：v1.0</span>
+      <span>日期：{{DATE}}</span>
+      <span>数据平台：{{PLATFORM}}</span>
+      <span>负责人：{{AUTHOR}}</span>
+    </div>
+  </div>
+
+  <!-- Section Nav -->
+  <nav class="section-nav">
+    <a href="#overview">方案概览</a>
+    <a href="#events">事件总览</a>
+    <a href="#detail">事件详情</a>
+    <a href="#dictionary">字段字典</a>
+    <a href="#naming">命名规范</a>
+    <a href="#qa">QA校验</a>
+    <a href="#sql">验收SQL</a>
+    <a href="#changelog">变更记录</a>
+  </nav>
+
+  <!-- 1. Overview -->
+  <div class="card" id="overview">
+    <h2>方案概览</h2>
+    <p style="font-size:14px;color:#333;margin-bottom:16px;">{{BUSINESS_CONTEXT}}</p>
+
+    <h3>核心链路</h3>
+    <div class="flow-chart">{{USER_FLOW}}</div>
+
+    <h3>关注指标</h3>
+    <table class="data-table">
+      <tr><th>指标</th><th>口径</th><th>依赖事件</th></tr>
+      <tr><td>{{METRIC_1}}</td><td>{{METRIC_1_DEF}}</td><td>{{METRIC_1_EVENTS}}</td></tr>
+    </table>
+  </div>
+
+  <!-- 2. Event Overview -->
+  <div class="card" id="events">
+    <h2>事件总览</h2>
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">全部</button>
+      <button class="filter-btn" data-filter="page">页面</button>
+      <button class="filter-btn" data-filter="expose">曝光</button>
+      <button class="filter-btn" data-filter="click">交互</button>
+      <button class="filter-btn" data-filter="action">业务</button>
+    </div>
+    <table class="data-table" id="eventOverviewTable">
+      <tr>
+        <th>#</th>
+        <th>事件名</th>
+        <th>类型</th>
+        <th>模块</th>
+        <th>触发时机</th>
+        <th>触发端</th>
+      </tr>
+      <tr data-type="page">
+        <td>1</td>
+        <td><code>{{EVENT_1_NAME}}</code></td>
+        <td><span class="tag tag-client">页面</span></td>
+        <td>{{EVENT_1_MODULE}}</td>
+        <td>{{EVENT_1_TRIGGER}}</td>
+        <td><span class="tag tag-client">客户端</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 3. Event Detail -->
+  <div class="card" id="detail">
+    <h2>事件详情</h2>
+
+    <div class="event-card" id="ev-{{EVENT_1_NAME}}">
+      <div class="ev-title">
+        <code>{{EVENT_1_NAME}}</code>
+        <span class="tag tag-client">客户端</span>
+      </div>
+      <div class="ev-meta">
+        <span>模块：{{EVENT_1_MODULE}}</span>
+        <span>类型：页面浏览</span>
+      </div>
+      <div class="ev-desc">{{EVENT_1_DESC}}</div>
+      <table class="data-table">
+        <tr>
+          <th>字段名</th>
+          <th>类型</th>
+          <th>必填</th>
+          <th>说明</th>
+          <th>枚举值 / 示例</th>
+        </tr>
+        <tr>
+          <td><code>page_name</code></td>
+          <td>string</td>
+          <td><span class="tag tag-required">必填</span></td>
+          <td>页面标识</td>
+          <td>{{PAGE_NAME_ENUM}}</td>
+        </tr>
+        <tr>
+          <td><code>page_stay_duration</code></td>
+          <td>number</td>
+          <td><span class="tag tag-optional">可选</span></td>
+          <td>页面停留时长(ms)</td>
+          <td>30000</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4. Field Dictionary -->
+  <div class="card" id="dictionary">
+    <h2>字段字典</h2>
+    <p style="font-size:13px;color:#5f6368;margin-bottom:12px;">跨事件复用的全局字段定义</p>
+    <table class="data-table">
+      <tr>
+        <th>字段名</th>
+        <th>类型</th>
+        <th>说明</th>
+        <th>枚举值</th>
+        <th>使用事件</th>
+      </tr>
+      <tr>
+        <td><code>page_name</code></td>
+        <td>string</td>
+        <td>页面标识</td>
+        <td>{{PAGE_NAME_ENUM}}</td>
+        <td>所有页面事件</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 5. Naming Convention -->
+  <div class="card" id="naming">
+    <h2>命名规范校验</h2>
+    <div class="validation-grid">
+      <div class="validation-item validation-pass">✓ 命名格式：全小写+下划线</div>
+      <div class="validation-item validation-pass">✓ 命名冲突：无重名</div>
+      <div class="validation-item validation-pass">✓ 字段一致：类型跨事件统一</div>
+      <div class="validation-item validation-pass">✓ 枚举完整：所有 string 有枚举</div>
+      <div class="validation-item validation-pass">✓ 成对事件：start/complete 完整</div>
+      <div class="validation-item validation-pass">✓ 必填字段：通用字段全覆盖</div>
+    </div>
+  </div>
+
+  <!-- 6. QA Checklist -->
+  <div class="card" id="qa">
+    <h2>QA 校验清单</h2>
+
+    <h3>{{EVENT_1_NAME}}</h3>
+    <ul class="checklist">
+      <li><input type="checkbox"> 触发时机：{{EVENT_1_TRIGGER}}</li>
+      <li><input type="checkbox"> 仅触发一次，不重复上报</li>
+      <li><input type="checkbox"> 弱网/断网场景正常缓存上报</li>
+      <li><input type="checkbox"> 所有必填字段有值且类型正确</li>
+      <li><input type="checkbox"> 枚举字段值在定义范围内</li>
+      <li><input type="checkbox"> user_id / device_id 正确传递</li>
+      <li><input type="checkbox"> 并发场景不丢失事件</li>
+    </ul>
+  </div>
+
+  <!-- 7. Validation SQL -->
+  <div class="card" id="sql">
+    <h2>验收 SQL</h2>
+
+    <h3>字段完整性校验</h3>
+    <div class="code-block">
+<span class="comment">-- 校验 {{EVENT_1_NAME}} 字段完整性</span>
+<span class="keyword">SELECT</span>
+  event_name,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> total,
+  <span class="function">COUNT</span>(user_id) <span class="keyword">AS</span> has_user_id,
+  <span class="function">COUNT</span>(device_id) <span class="keyword">AS</span> has_device_id,
+  <span class="function">COUNT</span>(page_name) <span class="keyword">AS</span> has_page_name
+<span class="keyword">FROM</span> events
+<span class="keyword">WHERE</span> event_name = <span class="string">'{{EVENT_1_NAME}}'</span>
+  <span class="keyword">AND</span> date = <span class="string">'{{CHECK_DATE}}'</span>
+<span class="keyword">GROUP BY</span> event_name;
+    </div>
+
+    <h3>事件量趋势</h3>
+    <div class="code-block">
+<span class="comment">-- 按小时检查事件量波动</span>
+<span class="keyword">SELECT</span>
+  <span class="function">date_format</span>(event_time, <span class="string">'%Y-%m-%d %H:00'</span>) <span class="keyword">AS</span> hour,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> event_count
+<span class="keyword">FROM</span> events
+<span class="keyword">WHERE</span> event_name <span class="keyword">IN</span> (<span class="string">'{{EVENT_LIST}}'</span>)
+  <span class="keyword">AND</span> date <span class="keyword">BETWEEN</span> <span class="string">'{{START_DATE}}'</span> <span class="keyword">AND</span> <span class="string">'{{END_DATE}}'</span>
+<span class="keyword">GROUP BY</span> hour
+<span class="keyword">ORDER BY</span> hour;
+    </div>
+  </div>
+
+  <!-- 8. Changelog -->
+  <div class="card" id="changelog">
+    <h2>变更记录</h2>
+    <table class="data-table">
+      <tr><th>版本</th><th>日期</th><th>变更内容</th><th>作者</th></tr>
+      <tr><td>v1.0</td><td>{{DATE}}</td><td>初始版本</td><td>{{AUTHOR}}</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<!-- FAB -->
+<button class="doc-fab" id="docFab">
+  <span class="doc-fab-label">方案文档</span>
+  <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+</button>
+
+<!-- Panel -->
+<div class="doc-panel-overlay" id="docOverlay"></div>
+<div class="doc-panel" id="docPanel">
+  <div class="doc-panel-header">
+    <h3>方案文档</h3>
+    <div class="doc-panel-header-actions">
+      <button class="doc-panel-btn" id="docCopyBtn">复制 Markdown</button>
+      <button class="doc-panel-close" id="docCloseBtn">×</button>
+    </div>
+  </div>
+  <div class="doc-panel-body">
+    <pre id="docContent"></pre>
+  </div>
+</div>
+
+<script>
+// Filter
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filter = btn.dataset.filter;
+    document.querySelectorAll('#eventOverviewTable tr[data-type]').forEach(row => {
+      row.style.display = (filter === 'all' || row.dataset.type === filter) ? '' : 'none';
+    });
+  });
+});
+
+// Doc Panel
+const docFab = document.getElementById('docFab');
+const docOverlay = document.getElementById('docOverlay');
+const docPanel = document.getElementById('docPanel');
+const docCloseBtn = document.getElementById('docCloseBtn');
+const docCopyBtn = document.getElementById('docCopyBtn');
+const docContent = document.getElementById('docContent');
+
+const designDocMarkdown = `# {{SPEC_TITLE}} 埋点方案 · 设计文档
+
+> 日期：{{DATE}} | 版本：v1.0 | 数据平台：{{PLATFORM}}
+
+---
+
+## 1. 业务背景
+{{BUSINESS_CONTEXT}}
+
+## 2. 事件总览
+
+| # | 事件名 | 类型 | 模块 | 触发时机 | 触发端 |
+|---|--------|------|------|----------|--------|
+| 1 | ... | ... | ... | ... | ... |
+
+## 3. 事件详情
+
+### 3.1 [event_name]
+- 触发时机：...
+- 触发端：...
+- 说明：...
+
+| 字段名 | 类型 | 必填 | 说明 | 枚举值 |
+|--------|------|------|------|--------|
+| ... | ... | ... | ... | ... |
+
+## 4. 字段字典
+{{FIELD_DICTIONARY}}
+
+## 5. 命名规范
+{{NAMING_CONVENTION}}
+
+## 6. QA 校验清单
+{{QA_CHECKLIST}}
+
+## 7. 验收 SQL
+{{VALIDATION_SQL}}
+
+## 8. 口径说明
+{{METRIC_DEFINITIONS}}
+
+## 9. 变更记录
+
+| 版本 | 日期 | 变更内容 | 作者 |
+|------|------|----------|------|
+| v1.0 | {{DATE}} | 初始版本 | {{AUTHOR}} |`;
+
+docContent.textContent = designDocMarkdown;
+
+function openDocPanel() { docPanel.classList.add('open'); docOverlay.classList.add('open'); }
+function closeDocPanel() { docPanel.classList.remove('open'); docOverlay.classList.remove('open'); }
+
+docFab.addEventListener('click', openDocPanel);
+docCloseBtn.addEventListener('click', closeDocPanel);
+docOverlay.addEventListener('click', closeDocPanel);
+
+docCopyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(designDocMarkdown).then(() => {
+    docCopyBtn.textContent = '已复制';
+    docCopyBtn.classList.add('copied');
+    setTimeout(() => { docCopyBtn.textContent = '复制 Markdown'; docCopyBtn.classList.remove('copied'); }, 2000);
+  });
+});
+</script>
+
+</body>
+</html>

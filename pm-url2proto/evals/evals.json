@@ -1,0 +1,23 @@
+{
+  "skill_name": "web-prototype",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我把这个页面克隆成本地项目: https://stripe.com/payments — 我想基于它做一个自己的支付产品介绍页原型",
+      "expected_output": "一个可运行的 Next.js + Tailwind CSS 项目，页面布局、配色、字体和间距高度还原 Stripe Payments 页面，包含 Header、Hero、功能模块和 Footer 等组件",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我想做一个类似 Linear 首页的原型，链接是 https://linear.app — 帮我把它的首页样式抓下来搭成本地 Next.js 项目",
+      "expected_output": "一个还原 Linear 首页视觉风格的 Next.js 项目，暗色主题、动效区域用静态占位、组件结构清晰可编辑",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "这是一个我们的内部工具: https://vercel.com/dashboard — 帮我克隆这个 dashboard 页面的布局和样式，我想用来做一个新的后台管理原型",
+      "expected_output": "一个模仿 Vercel Dashboard 布局的 Next.js 项目，包含侧边栏/顶栏导航、内容区、卡片组件等，样式与原站尽量一致",
+      "files": []
+    }
+  ]
+}
